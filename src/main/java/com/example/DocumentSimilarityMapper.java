@@ -1,6 +1,9 @@
 package com.example;
 
 import java.io.IOException;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -27,13 +30,57 @@ import org.apache.hadoop.mapreduce.Mapper;
  * The generic types below match the design suggested in README.md. You may change them if
  * you choose a different design — just keep them consistent with the reducer and driver.
  */
-public class DocumentSimilarityMapper extends Mapper<LongWritable, Text, Text, Text> {
+
+public class DocumentSimilarityMapper
+        extends Mapper<LongWritable, Text, Text, Text> {
 
     @Override
     protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
-        // TODO: split the line into the document ID and the text,
-        //       tokenize the text following the rules above,
-        //       and emit what the reducer needs.
+
+        String line = value.toString().trim();
+
+        if (line.isEmpty()) {
+            return;
+        }
+
+        // The first whitespace-delimited token is the document ID.
+        String[] parts = line.split("\\s+", 2);
+
+        String documentId = parts[0];
+        String documentText = parts.length > 1 ? parts[1] : "";
+
+        // A Set ensures that repeated words count only once.
+        Set<String> words = new TreeSet<>();
+
+        // Lowercase and split the document text on whitespace.
+        for (String token : documentText
+                .toLowerCase(Locale.ROOT)
+                .split("\\s+")) {
+
+            // Keep only a-z and 0-9.
+            String cleaned = token.replaceAll("[^a-z0-9]", "");
+
+            // Ignore empty tokens.
+            if (!cleaned.isEmpty()) {
+                words.add(cleaned);
+            }
+        }
+
+        // Convert the set to a space-separated string.
+        StringBuilder wordList = new StringBuilder();
+
+        for (String word : words) {
+            if (wordList.length() > 0) {
+                wordList.append(' ');
+            }
+
+            wordList.append(word);
+        }
+
+        context.write(
+                new Text(documentId),
+                new Text(wordList.toString())
+        );
     }
 }

@@ -32,20 +32,68 @@ import com.example.DocumentSimilarityReducer;
  *     commutative on the mapper's output. Think about whether that is true for your design;
  *     with the suggested one, it is not.
  */
+
+
 public class DocumentSimilarityDriver {
 
     public static void main(String[] args) throws Exception {
+
         if (args.length != 2) {
-            System.err.println("Usage: DocumentSimilarityDriver <input path> <output path>");
+            System.err.println(
+                    "Usage: DocumentSimilarityDriver <input path> <output path>"
+            );
             System.exit(2);
         }
 
         Configuration conf = new Configuration();
-        // TODO: configure the job — see the class comment above and Controller.java from L4.
-        Job job = Job.getInstance(conf, "document similarity");
 
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        // The required output uses a space instead of the default tab.
+        conf.set(
+                "mapreduce.output.textoutputformat.separator",
+                " "
+        );
+
+        Job job = Job.getInstance(
+                conf,
+                "document similarity"
+        );
+
+        // Tell Hadoop which class contains the job.
+        job.setJarByClass(
+                DocumentSimilarityDriver.class
+        );
+
+        // Configure Mapper and Reducer.
+        job.setMapperClass(
+                DocumentSimilarityMapper.class
+        );
+
+        job.setReducerClass(
+                DocumentSimilarityReducer.class
+        );
+
+        // Design A requires exactly one reducer.
+        job.setNumReduceTasks(1);
+
+        // Mapper and Reducer output types.
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        // Input and output paths.
+        FileInputFormat.addInputPath(
+                job,
+                new Path(args[0])
+        );
+
+        FileOutputFormat.setOutputPath(
+                job,
+                new Path(args[1])
+        );
+
+        System.exit(
+                job.waitForCompletion(true)
+                        ? 0
+                        : 1
+        );
     }
 }
